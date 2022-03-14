@@ -29,7 +29,7 @@ def get_list_of_links(p_n= 100):
                 plink = eintrag.a ["href"]
                 if plink not in list_o_links:
                     list_o_links.append(plink)
-            print(f"Eintrag {i} von {p_n} gelesen")
+            print(f"Eintrag {i} von {p_n} gelesenn")
     return list_o_links
 
 
