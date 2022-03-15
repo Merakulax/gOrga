@@ -20,13 +20,12 @@ def get_list_of_links(p_n= 100):
         source = requests.get(link(i)).text
         soup = BeautifulSoup(source, 'lxml')
         test = soup.find('div', id="main").h1.text
-
         if test == "Fehler 404 – Seite nicht gefunden":
             return list_o_links
         else:
             content = soup.find('ul', class_="geodir-category-list-view clearfix gridview_onefifth geodir-listing-posts geodir-gridview gridview_onefifth")
             for eintrag in content.find_all('li'):
-                plink = eintrag.a ["href"]
+                plink = eintrag.a["href"]
                 if plink not in list_o_links:
                     list_o_links.append(plink)
             print(f"Eintrag {i} von {p_n} gelesenn")
@@ -40,8 +39,8 @@ def main():
 
     :return:
     """
-    # n_o_pages = 1
-    # links_safe = get_list_of_links(n_o_pages)
+    n_o_pages = 1
+    links_safe = get_list_of_links(n_o_pages)
     # print(links_safe)
     links_safe = links_manuell
     source = (requests.get(links).text for links in links_safe)
@@ -50,9 +49,9 @@ def main():
     soup = (BeautifulSoup(sc, 'lxml') for sc in source)
     for s in soup:
 
+        name_unternehmen = ""
         # Notice: those are all not nessesary!
         # check: are they there -> then read them.
-        ## 'dd' class_="" -> elemente schauen maybe cases? also mit liste abgehen und wirkungskriese == wirkungskrieseTab finden?
         h = [inhalt.text for inhalt in s.find_all('dd')]
         print(f"liste:: {h} \n")
         if "Profil" in h:
@@ -66,21 +65,22 @@ def main():
             stellenangebote = s.find('li', id="stellenangeboteTab").text
             print(f"stellenganebote: {stellenangebote}")
 
-        fotos = "link"
-
         veranstaltungen = ""
 
+        fotos = "links"
 
+        filme = "film1 + film2 + film3 vll mit find_all"
 
+        # timer nutzen, schauen ob es sinnvoll ist auf der geanzen webseite zu suchen, oder vorher einen ausschnitt zu
+        # erstellen
+        # info = s.find('div', id="gd_output_location-2")
         telefonnummer = ""
-        Adresse = ""
-        E_Mail = ""
+        Adresse = "mehrere Bestandteile"
+        E_Mail = "auch"
         Foerderbedarf = ""
 
 
-        #info = s.find('div', id="gd_output_location-2")
         #print(info.prettify())
-
 
 
 
