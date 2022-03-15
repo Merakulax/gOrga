@@ -1,6 +1,7 @@
 from bs4 import BeautifulSoup #Webscraper
 import lxml
 import requests # HTTP/ library
+import re
 #https://edelmut.org/organisationen/page/1/
 
 # Insert the webside link here:
@@ -39,8 +40,9 @@ def main():
 
     :return:
     """
+    index = 0
     n_o_pages = 1
-    links_safe = get_list_of_links(n_o_pages)
+    #links_safe = get_list_of_links(n_o_pages)
     # print(links_safe)
     links_safe = links_manuell
     source = (requests.get(links).text for links in links_safe)
@@ -48,28 +50,64 @@ def main():
 
     soup = (BeautifulSoup(sc, 'lxml') for sc in source)
     for s in soup:
+        name_unternehmen = s.find('div', id="main").h1.text
+        print(name_unternehmen)
 
-        name_unternehmen = ""
+        # We only need the content of the webside
+        content = s.find('div', id="main")
+
         # Notice: those are all not nessesary!
         # check: are they there -> then read them.
-        h = [inhalt.text for inhalt in s.find_all('dd')]
-        print(f"liste:: {h} \n")
-        if "Profil" in h:
-            profil = s.find('li', id="post_contentTab").text
-            print(f"profil: {profil}")
-        if "Wirkungskreise" in h:
-            wirkunskeise = s.find('li', id="wirkungskreiseTab").text
-            print(f" wirkungskreise: {wirkunskeise}")
+        list_of_tabs = [inhalt.text for inhalt in content.find_all('dd')]
+        print(f"liste:: {list_of_tabs} \n")
 
-        if "Stellenangebote" in h:
-            stellenangebote = s.find('li', id="stellenangeboteTab").text
+        if "Profil" in list_of_tabs:
+            profil = content.find('li', id="post_contentTab").text
+            print(f"profil: {profil}")
+
+        if "Wirkungskreise" in list_of_tabs:
+            wirkunskeise = content.find('li', id="wirkungskreiseTab").text
+            print(f"wirkungskreise: {wirkunskeise}")
+
+        if "Stellenangebote" in list_of_tabs:
+            stellenangebote = content.find('li', id="stellenangeboteTab").text
             print(f"stellenganebote: {stellenangebote}")
 
-        veranstaltungen = ""
+        if "Veranstaltungen" in list_of_tabs:
+            veranstaltungen = content.find('li', id="gd_eventTab").a['href']
+            print(f"Veranstaltungen : {veranstaltungen}")
 
-        fotos = "links"
+        if "Fotos" in list_of_tabs:
+            fotos_list = content.find_all('a', class_="geodir-lightbox-image d-block")
+            fotos = [f["href"]for f in fotos_list]
+            print(f"Fotots: {fotos}")
 
-        filme = "film1 + film2 + film3 vll mit find_all"
+        # Tuff: also erstmal rausfinden: wie viele filme, welche src
+        # man muss einwilligen -> mit scelenium?
+        if "Film" in list_of_tabs:
+            vid = f"{links_safe[index]}#video"
+            film = f"Watch the films here: {vid}"
+            print(film)
+
+        # Sidebar:
+        # 1. was gibt es überhaupt an der sidebar?  -> contents?
+
+        sidebar = content.find('div', id="gd_output_location-2").text
+        print(sidebar)
+        print("\n")
+        print("-----------")
+        # s1 = re.split("Adresse:|E-Mail:|Telefon:|Stellenangebote|Förderbedarf:",sidebar)[1:5]
+        """ 
+        adresse = s1[0]
+        e_mail = s1[1]
+        tel = s1[2]
+        f_bed = s1[3]
+        """
+        # List of sidebar things -> wieder mit if "Adresse in list of sidebar things"
+        # Adresse
+        # Webseite -> Link
+
+
 
         # timer nutzen, schauen ob es sinnvoll ist auf der geanzen webseite zu suchen, oder vorher einen ausschnitt zu
         # erstellen
@@ -82,11 +120,7 @@ def main():
 
         #print(info.prettify())
 
-
-
-
-
-
+        index = index + 1
 
 
     return None
