@@ -8,9 +8,9 @@ import requests
 
 def main():
     # Read df:
-    df = pd.read_csv("postings_mitVid.csv", sep=";", encoding="utf-8-sig")
+    df = pd.read_csv("postings_mitVid.csv", sep=";", encoding="utf-8")
 
-    csv_file = open('beispiel.csv', 'w')
+    csv_file = open('beispiel.csv', 'w', encoding="utf-8")
     csv_writer = csv.writer(csv_file)
     csv_writer.writerow(['posting_url', 'profile_url', 'posted_date', 'num_likes', 'num_views','posting_text'])
 
@@ -48,11 +48,11 @@ def main():
 
         # Get the posting text
         posting_text = soup.find('span', class_="_7UhW9 xLCgt MMzan KV-D4 se6yk T0kll").text
-        print(posting_text)
 
         try:
             csv_writer.writerow([posting_url, profile_url, posted_date, num_likes, num_views, posting_text])
         except UnicodeEncodeError:
+            print(UnicodeEncodeError)
             print("!!!hey, da hat was mit dem encoden nicht funktioniert")
             csv_writer.writerow([posting_url, profile_url, posted_date, num_likes, num_views, None])
     csv_file.close()
