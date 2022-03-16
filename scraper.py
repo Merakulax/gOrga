@@ -1,3 +1,5 @@
+import csv
+
 from bs4 import BeautifulSoup #Webscraper
 import lxml
 import requests # HTTP/ library
@@ -7,9 +9,8 @@ import re
 # Insert the webside link here:
 link = lambda page: f"https://edelmut.org/organisationen/page/{page}/"
 
-links_manuell = ['https://edelmut.org/organisationen/wildfrieden-e-v/', 'https://edelmut.org/organisationen/deutsche-stiftung-fuer-engagement-und-ehrenamt/', 'https://edelmut.org/organisationen/mut-academy-ggmbh/', 'https://edelmut.org/organisationen/schaukelpferd-e-v/', 'https://edelmut.org/organisationen/homann-stiftung/', 'https://edelmut.org/organisationen/michel-stiftung/', 'https://edelmut.org/organisationen/thematanz-e-v/', 'https://edelmut.org/organisationen/bildungsgabe-e-v/', 'https://edelmut.org/organisationen/aktion-baum/', 'https://edelmut.org/organisationen/deutsche-muskelschwund-hilfe-e-v/']
 
-def get_list_of_links(p_n= 100):
+def get_list_of_links(p_n= 1000):
     """Returns all the links in the website
     :param p_n: if no maximum of pages given then stop at 100
     :return: the list of links
@@ -33,20 +34,149 @@ def get_list_of_links(p_n= 100):
     return list_o_links
 
 
+def get_beschreibungen(content, index, list_of_links):
+    """
+
+    :param content: the html of the pagecontent
+    :param index: of the link
+    :param list_of_links:
+    :return: all of the beschreibungen of the organisation
+    """
+    # All of them are None if not changed
+    profil = None
+    wirkunskeise = None
+    stellenangebote = None
+    veranstaltungen = None
+    fotos = None
+    film = None
+
+
+    # Notice: those are all not nessesary!
+    # check: are they there -> then read them.
+    list_of_tabs = [inhalt.text for inhalt in content.find_all('dd')]
+    # print(f"liste:: {list_of_tabs} \n")
+
+    if "Profil" in list_of_tabs:
+        profil = content.find('li', id="post_contentTab").text
+        # print(f"profil: {profil}")
+
+    if "Wirkungskreise" in list_of_tabs:
+        wirkunskeise = content.find('li', id="wirkungskreiseTab").text
+        # print(f"wirkungskreise: {wirkunskeise}")
+
+    if "Stellenangebote" in list_of_tabs:
+        stellenangebote = content.find('li', id="stellenangeboteTab").text
+        # print(f"stellenganebote: {stellenangebote}")
+
+    if "Veranstaltungen" in list_of_tabs:
+        veranstaltungen = content.find('li', id="gd_eventTab").a['href']
+        # print(f"Veranstaltungen : {veranstaltungen}")
+
+    if "Fotos" in list_of_tabs:
+        fotos_list = content.find_all('a', class_="geodir-lightbox-image d-block")
+        fotos = [f["href"] for f in fotos_list]
+        # print(f"Fotots: {fotos}")
+
+    # Film via the edelmut inbetted videos
+
+    if "Film" in list_of_tabs:
+        vid = f"{list_of_links[index]}#video"
+        film = f"Watch the films here: {vid}"
+        # print(film)
+
+    return profil, wirkunskeise, stellenangebote, veranstaltungen, fotos, film
+
+
+
+def get_sidebar(sidebar_soup):
+    """
+
+    :param sidebar_soup: soup of the sidebar
+    :return:
+    """
+    adress = None
+    webside = None
+    mail_full = None
+    telefone = None
+    stellenangebote_sidebar = None
+    all_foerderbedarfe = None
+
+    # Get the contents of the sidebar:
+    kat = sidebar_soup.find_all('div')
+    # print(kat)
+    side_e = []
+    for sidebar in kat:
+        try:
+            if sidebar["class"][1] not in side_e:
+                side_e.append(sidebar["class"][1])
+        except:
+            pass
+    print(side_e)
+    # print(sidebar.prettify())
+
+    # Check each if in sidebar: then get
+    if 'geodir-field-address' in side_e:
+        street_adress = sidebar_soup.find('span', itemprop="streetAddress").text
+        postal_code = sidebar_soup.find('span', itemprop="postalCode").text
+        adress_locality = sidebar_soup.find('span', itemprop="addressLocality").text
+        adress = f"{street_adress} \n {postal_code} {adress_locality}"
+        # print(f"Adresse: {adress}")
+
+    if 'geodir-field-website' in side_e:
+        webside = sidebar_soup.find('div', class_="geodir_post_meta geodir-field-website").a["href"]
+        # print(f"Webseite: {webside}")
+
+    if 'geodir-field-email' in side_e:
+        mail = sidebar_soup.find('div', class_="geodir_post_meta geodir-field-email").a["href"]
+        first = mail.split("[")[1]
+        second = first.split("]")[0]
+        third = second.split(",")
+        mail_full = "@".join(third)
+        # print(f"E-Mail: {mail_full}")
+
+    if 'geodir-field-phone' in side_e:
+        tel = sidebar_soup.find('div', class_="geodir_post_meta geodir-field-phone").a["href"]
+        telefone = tel.split("tel:")[1]
+        # print(f"Telefon: {telefone} ")
+
+    if 'geodir-field-stellenauswahl' in side_e:
+        foerderbedarf = sidebar_soup.find('div', class_="geodir_post_meta geodir-field-stellenauswahl")
+        stellenangebote_sidebar = [sa.text for sa in foerderbedarf.find_all('li')]
+        # print(f"Stellenangebote: {stellenangebote_sidebar}")
+
+    if 'geodir-field-foerder_auswahl' in side_e:
+        st_a = sidebar_soup.find('div', class_="geodir_post_meta geodir-field-foerder_auswahl")
+        all_foerderbedarfe = [fb.text for fb in st_a.find_all('li')]
+        # print(f"Foerderbedarf: {all_foerderbedarfe}")
+
+    return adress, webside, mail_full, telefone, stellenangebote_sidebar , all_foerderbedarfe
 
 
 def main():
-    """
+    """ Main Function
+    First open the webside to get all the links
+    then scrape the beschreibung and sidebar
+    save in a csv
 
-    :return:
+    :return: a csv
     """
     index = 0
-    n_o_pages = 1
-    #links_safe = get_list_of_links(n_o_pages)
-    # print(links_safe)
-    links_safe = links_manuell
-    source = (requests.get(links).text for links in links_safe)
-    #print(source)
+    # Do you want to read all of the pages? Or just one?
+    n_o_pages = 8
+    list_of_links = get_list_of_links(n_o_pages)
+    #linksd = ["https://edelmut.org/organisationen/hamburgische-bruecke-gesellschaft-fuer-private-sozialarbeit-e-v/","https://edelmut.org/organisationen/hamburgische-kulturstiftung/"]
+
+    source = (requests.get(links).text for links in list_of_links)
+    # print(source)
+
+    # open csv file
+    csv_file = open('edelmut_scraper.csv','w', encoding="utf-8")
+    csv_writer = csv.writer(csv_file)
+
+    # create header
+    csv_writer.writerow(["Organisation", "Adresse", "Webseite", "E-Mail", "Telefonnummer", "Stellenangebote",
+                         "Foerderbedarfe","Profil", "Wirkunskreise", "Stellenangebote_Beschreibung",
+                         "Veranstaltungen_Beschreibung", "Foto", "Film"])
 
     soup = (BeautifulSoup(sc, 'lxml') for sc in source)
     for s in soup:
@@ -56,81 +186,25 @@ def main():
         # We only need the content of the webside
         content = s.find('div', id="main")
 
-        # Notice: those are all not nessesary!
-        # check: are they there -> then read them.
-        list_of_tabs = [inhalt.text for inhalt in content.find_all('dd')]
-        print(f"liste:: {list_of_tabs} \n")
+        profil, wirkunskreise, stellenangebote, veranstaltungen, fotos, film = get_beschreibungen(content, index, list_of_links)
 
-        if "Profil" in list_of_tabs:
-            profil = content.find('li', id="post_contentTab").text
-            print(f"profil: {profil}")
-
-        if "Wirkungskreise" in list_of_tabs:
-            wirkunskeise = content.find('li', id="wirkungskreiseTab").text
-            print(f"wirkungskreise: {wirkunskeise}")
-
-        if "Stellenangebote" in list_of_tabs:
-            stellenangebote = content.find('li', id="stellenangeboteTab").text
-            print(f"stellenganebote: {stellenangebote}")
-
-        if "Veranstaltungen" in list_of_tabs:
-            veranstaltungen = content.find('li', id="gd_eventTab").a['href']
-            print(f"Veranstaltungen : {veranstaltungen}")
-
-        if "Fotos" in list_of_tabs:
-            fotos_list = content.find_all('a', class_="geodir-lightbox-image d-block")
-            fotos = [f["href"]for f in fotos_list]
-            print(f"Fotots: {fotos}")
-
-        # Tuff: also erstmal rausfinden: wie viele filme, welche src
-        # man muss einwilligen -> mit scelenium?
-        if "Film" in list_of_tabs:
-            vid = f"{links_safe[index]}#video"
-            film = f"Watch the films here: {vid}"
-            print(film)
 
         # Sidebar:
         # 1. was gibt es überhaupt an der sidebar?  -> contents?
+        sidebar = content.find('div', class_="d-block geodir-output-location geodir-output-location-detail")
 
-        sidebar = content.find('div', id="gd_output_location-2").text
-        print(sidebar)
-        print("\n")
-        print("-----------")
-        # s1 = re.split("Adresse:|E-Mail:|Telefon:|Stellenangebote|Förderbedarf:",sidebar)[1:5]
-        """ 
-        adresse = s1[0]
-        e_mail = s1[1]
-        tel = s1[2]
-        f_bed = s1[3]
-        """
-        # List of sidebar things -> wieder mit if "Adresse in list of sidebar things"
-        # Adresse
-        # Webseite -> Link
+        adress, webside, mail_full, telefone, stellenangebote_sidebar, all_foerderbedarfe = get_sidebar(sidebar)
 
+        csv_writer.writerow(
+            [name_unternehmen, adress, webside, mail_full, telefone, stellenangebote_sidebar, all_foerderbedarfe,
+             profil, wirkunskreise, stellenangebote, veranstaltungen, fotos, film])
 
-
-        # timer nutzen, schauen ob es sinnvoll ist auf der geanzen webseite zu suchen, oder vorher einen ausschnitt zu
-        # erstellen
-        # info = s.find('div', id="gd_output_location-2")
-        telefonnummer = ""
-        Adresse = "mehrere Bestandteile"
-        E_Mail = "auch"
-        Foerderbedarf = ""
-
-
-        #print(info.prettify())
-
+        # print("\n")
+        # print("-----------")
         index = index + 1
-
+    csv_file.close()
 
     return None
-
-
-
-
-
-
-
 
 
 if __name__ == '__main__':
